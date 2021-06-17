@@ -47,7 +47,6 @@ export default class WebSocketServer extends EventEmitter {
       '\r\n'
     ];
     socket.write(chunks.join('\r\n'));
-    // socket[kWebSocket] = this;
     const ws = new WebSocket(this, socket);
     this.sockets.set(socket, ws);
     this.emit('connection', ws);
