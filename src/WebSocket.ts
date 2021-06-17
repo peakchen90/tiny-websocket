@@ -114,7 +114,7 @@ export default class WebSocket {
     // Tips: 一个字节有8位； `&` 运算符，只有2个位都为1时，才会1，否则为0
     this.fin = (buffer[0] & 0b10000000) === 0b10000000; // 取第1位，判断为0还是1
     this.opcode = buffer[0] & 0b00001111; // 取第4-8位
-    this.masked = (buffer[1] & 0b10000000) === 0b10000000;  // 取9位，判断为0还是1（Mask）
+    this.masked = (buffer[1] & 0b10000000) === 0b10000000;  // 取第9位，判断为0还是1（Mask）
 
     // https://developer.mozilla.org/zh-CN/docs/Web/API/WebSockets_API/Writing_WebSocket_servers#%E8%A7%A3%E7%A0%81%E6%9C%89%E6%95%88%E8%BD%BD%E8%8D%B7%E9%95%BF%E5%BA%A6
     this.payloadLength = buffer[1] & 0b01111111;  // 取第10-16位（Payload len）
