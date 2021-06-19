@@ -2,9 +2,9 @@ import http from 'http';
 import WebSocketServer from './WebSocketServer';
 
 const server = http.createServer();
-const ws = new WebSocketServer(server);
+const wss = new WebSocketServer(server);
 
-ws.on('message', (message, sender) => {
+wss.on('message', (sender, message) => {
   const {username, data} = JSON.parse(message);
 
   sender.broadcast(JSON.stringify({

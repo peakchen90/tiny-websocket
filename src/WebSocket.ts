@@ -3,7 +3,52 @@ import WebSocketServer from './WebSocketServer';
 import * as stream from 'stream';
 import {randomFillSync} from 'crypto';
 
-const MASKING_BUFFER = Buffer.alloc(4);
+class KeepAlive {
+  ws: WebSocket;
+
+  private currentIndex: number;
+  private tryCount: number;
+  private timer?: NodeJS.Timeout;
+  private _listener: any;
+
+  constructor(ws: WebSocket) {
+    this.ws = ws;
+    this.currentIndex = 0;
+    this.tryCount = 0;
+
+    this.keepAlive();
+
+    this.ws.wss.on('pong', this._listener = (_ws, message) => {
+      if (this.ws === _ws) {
+        const responseIndex = Number(message);
+        if (this.currentIndex === responseIndex) {
+          this.tryCount = 0;
+        } else {
+          this.tryCount++;
+        }
+      }
+    });
+  }
+
+  keepAlive() {
+    this.timer = setTimeout(() => {
+      this.ws.ping(String(++this.currentIndex));
+      if (this.tryCount <= 3) {
+        this.keepAlive();
+      } else {
+        this.ws.close();
+        this.destroy();
+      }
+    }, 3000);
+  }
+
+  destroy() {
+    if (this.timer) {
+      clearTimeout(this.timer);
+    }
+    this.ws.wss.off('pong', this._listener);
+  }
+}
 
 /*
  Frame:
@@ -41,10 +86,11 @@ const MASKING_BUFFER = Buffer.alloc(4);
 
 */
 
+const MASKING_BUFFER = Buffer.alloc(4);
 
 export default class WebSocket {
-  private wss: WebSocketServer;
-  private socket: stream.Duplex;
+  wss: WebSocketServer;
+  socket: stream.Duplex;
 
   private bufferedBytes: number; // 所有缓存 buffer 的字节数
   private buffers: Buffer[]; // 所有缓存的buffer
@@ -56,6 +102,8 @@ export default class WebSocket {
   private maskingKey?: Buffer; // 掩码key
   private payloadLength: number; // 当前帧数据载荷长度
   private totalPayloadLength: number; // 数据载荷总长度
+
+  private keepAlive: KeepAlive;
 
   constructor(wss: WebSocketServer, socket: stream.Duplex) {
     this.wss = wss;
@@ -73,6 +121,7 @@ export default class WebSocket {
     this.totalPayloadLength = 0;
 
     this.init();
+    this.keepAlive = new KeepAlive(this);
   }
 
   init() {
@@ -80,10 +129,11 @@ export default class WebSocket {
       this.append(chunk);
     });
     this.socket.on('close', () => {
+      this.close();
     });
-    this.socket.on('end', () => {
-    });
-    this.socket.on('error', () => {
+    this.socket.on('error', (err: Error) => {
+      console.error(err);
+      this.wss.emit('error', err);
     });
   }
 
@@ -98,10 +148,8 @@ export default class WebSocket {
     this.bufferedBytes += chunk.length;
     this.buffers.push(chunk);
 
-    const isGetData = this.getInfo();
-    if(isGetData) {
-      this.getData();
-    }
+    this.getInfo();
+    this.getData();
   }
 
   getInfo() {
@@ -132,19 +180,6 @@ export default class WebSocket {
     if (this.masked) {
       this.maskingKey = this.consume(4);
     }
-
-    // 判断操作码
-    if (this.opcode === 0x08) { // disconnect
-      this.wss.emit('disconnect');
-      this.socket.end();
-      this.close();
-    } else if (this.opcode === 0x09) { // ping
-      this.wss.emit('ping', this);
-    } else if (this.opcode === 0x0A) { // pong
-      this.wss.emit('pong', this);
-    } else {
-      return true; // continue get data
-    }
   }
 
   getData() {
@@ -156,6 +191,13 @@ export default class WebSocket {
       this.fragments.push(data);
     }
 
+    if (this.opcode >= 0x08) { // control frames
+      this.handleControlFrames(data);
+      this.totalPayloadLength = 0;
+      this.fragments = [];
+      return;
+    }
+
     if (this.fin) { // 分片是否已经结束
       let message: unknown;
       if (this.opcode === 0x02) { // 二进制数据
@@ -163,12 +205,38 @@ export default class WebSocket {
       } else { // 文本数据
         message = this.fragments.map(item => item.toString()).join('');
       }
-      this.wss.emit('message', message, this);
+      this.wss.emit('message', this, message);
 
       this.totalPayloadLength = 0;
       this.fragments = [];
     }
   }
+
+  /**
+   * 处理控制帧
+   * @see https://datatracker.ietf.org/doc/html/rfc6455#section-5.5
+   */
+  handleControlFrames(data: Buffer) {
+    if (this.opcode === 0x08) { // disconnect
+
+      const code = data.slice(0, 2).readUInt16BE(0);
+      const reason = data.slice(2).toString();
+
+      this.wss.emit('disconnect', this, code, reason);
+      this.socket.end();
+      this.close();
+      return;
+    }
+
+    const message = data.toString();
+    if (this.opcode === 0x09) { // ping
+      this.wss.emit('ping', this, message);
+      this.pong(message);
+    } else if (this.opcode === 0x0A) { // pong
+      this.wss.emit('pong', this, message);
+    }
+  }
+
 
   /**
    * 加密/解密 掩码
@@ -219,11 +287,6 @@ export default class WebSocket {
     }
 
     return buffer;
-  }
-
-  close() {
-    this.socket.destroy();
-    this.wss.emit('close');
   }
 
   /**
@@ -283,19 +346,26 @@ export default class WebSocket {
     return buffer;
   }
 
+  close() {
+    this.socket.destroy();
+    this.keepAlive.destroy();
+    this.wss.sockets.delete(this.socket);
+    this.wss.emit('close', this);
+  }
+
   broadcast(message: any) {
     this.wss.send(message);
   }
 
   send(message: any, {
     isBinary = false,
-    opcode = 0
-  } = {}) {
+    opcode
+  }: { isBinary?: boolean, opcode?: number } = {}) {
     if (isBinary) {
-      opcode = 0x02;
+      opcode = opcode ?? 0x02;
     } else {
       message = String(message);
-      opcode = 0x01;
+      opcode = opcode ?? 0x01;
     }
 
     const buffer = Buffer.isBuffer(message) ? message : Buffer.from(message);
@@ -306,5 +376,13 @@ export default class WebSocket {
         opcode
       })
     );
+  }
+
+  ping(message = '') {
+    this.send(message, {opcode: 0x09});
+  }
+
+  pong(message = '') {
+    this.send(message, {opcode: 0x0A});
   }
 }

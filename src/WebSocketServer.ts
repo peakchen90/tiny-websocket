@@ -19,6 +19,10 @@ export default class WebSocketServer extends EventEmitter {
     this.server.on('listening', this.emit.bind(this, 'listening'));
     this.server.on('error', this.emit.bind(this, 'error'));
     this.server.on('upgrade', this.handleUpgrade.bind(this));
+
+    this.on('disconnect', (ws) => {
+      this.sockets.delete(ws.socket);
+    });
   }
 
   handleUpgrade(req: http.IncomingMessage, socket: stream.Duplex) {
@@ -53,13 +57,23 @@ export default class WebSocketServer extends EventEmitter {
   }
 
   on(event: 'connection', listener: (ws: WebSocket) => void): this;
-  on(event: 'disconnect', listener: () => void): this;
-  on(event: 'ping', listener: (ws: WebSocket) => void): this;
-  on(event: 'pong', listener: (ws: WebSocket) => void): this;
-  on(event: 'message', listener: (message: any, sender: WebSocket) => void): this;
-  on(event: 'close', listener: (message: any, sender: WebSocket) => void): this;
+  on(event: 'disconnect', listener: (ws: WebSocket, code: number, reason: string) => void): this;
+  on(event: 'ping', listener: (ws: WebSocket, message: any) => void): this;
+  on(event: 'pong', listener: (ws: WebSocket, message: any) => void): this;
+  on(event: 'message', listener: (sender: WebSocket, message: any) => void): this;
+  on(event: 'close', listener: (ws: WebSocket) => void): this;
   on(event: string | symbol, listener: (...args: any[]) => void): this {
     return super.on(event, listener);
+  }
+
+  off(event: 'connection', listener: (ws: WebSocket) => void): this;
+  off(event: 'disconnect', listener: (ws: WebSocket, code: number, reason: string) => void): this;
+  off(event: 'ping', listener: (ws: WebSocket, message: any) => void): this;
+  off(event: 'pong', listener: (ws: WebSocket, message: any) => void): this;
+  off(event: 'message', listener: (sender: WebSocket, message: any) => void): this;
+  off(event: 'close', listener: (ws: WebSocket) => void): this;
+  off(event: string | symbol, listener: (...args: any[]) => void): this {
+    return super.off(event, listener);
   }
 
   send(message: any, socket?: stream.Duplex) {

@@ -6,6 +6,7 @@ const logs = document.getElementById('logs');
 nickname.value = localStorage.getItem('tiny_ws_username') || `User_${Math.random().toString(36).slice(2, 6)}`;
 
 const ws = new WebSocket('ws://127.0.0.1:5555');
+window.ws = ws;
 
 ws.onopen = () => {
   printLog('已连接服务器');
