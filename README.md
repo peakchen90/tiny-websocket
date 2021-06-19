@@ -17,7 +17,10 @@ yarn demo
 
 ## Features
 - 只实现了基本功能，不要用于生产环境！
-- 目前只支持接收/发送文本，不支持二进制
+- 支持文本/二进制传输
+- 支持 ping/pong
+- 支持分片传输
+- *不支持压缩*
 
 ## 参考
 - https://datatracker.ietf.org/doc/html/rfc6455#section-5
