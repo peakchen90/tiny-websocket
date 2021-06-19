@@ -58,31 +58,29 @@ export default class WebSocketServer extends EventEmitter {
 
   on(event: 'connection', listener: (ws: WebSocket) => void): this;
   on(event: 'disconnect', listener: (ws: WebSocket, code: number, reason: string) => void): this;
-  on(event: 'ping', listener: (ws: WebSocket, message: any) => void): this;
-  on(event: 'pong', listener: (ws: WebSocket, message: any) => void): this;
-  on(event: 'message', listener: (sender: WebSocket, message: any) => void): this;
-  on(event: 'close', listener: (ws: WebSocket) => void): this;
+  on(event: 'ping', listener: (ws: WebSocket, message: string) => void): this;
+  on(event: 'pong', listener: (ws: WebSocket, message: string) => void): this;
+  on(event: 'message', listener: (sender: WebSocket, message: string | Buffer) => void): this;
   on(event: string | symbol, listener: (...args: any[]) => void): this {
     return super.on(event, listener);
   }
 
   off(event: 'connection', listener: (ws: WebSocket) => void): this;
   off(event: 'disconnect', listener: (ws: WebSocket, code: number, reason: string) => void): this;
-  off(event: 'ping', listener: (ws: WebSocket, message: any) => void): this;
-  off(event: 'pong', listener: (ws: WebSocket, message: any) => void): this;
-  off(event: 'message', listener: (sender: WebSocket, message: any) => void): this;
-  off(event: 'close', listener: (ws: WebSocket) => void): this;
+  off(event: 'ping', listener: (ws: WebSocket, message: string) => void): this;
+  off(event: 'pong', listener: (ws: WebSocket, message: string) => void): this;
+  off(event: 'message', listener: (sender: WebSocket, message: string | Buffer) => void): this;
   off(event: string | symbol, listener: (...args: any[]) => void): this {
     return super.off(event, listener);
   }
 
-  send(message: any, socket?: stream.Duplex) {
+  send(message: any | Buffer[], isBinary = false, socket?: stream.Duplex) {
     if (socket) {
       const target = this.sockets.get(socket);
-      target?.send(message);
+      target?.send(message, isBinary);
     } else {
       this.sockets.forEach(ws => {
-        ws.send(message);
+        ws.send(message, isBinary);
       });
     }
   }

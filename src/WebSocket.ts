@@ -16,8 +16,6 @@ class KeepAlive {
     this.currentIndex = 0;
     this.tryCount = 0;
 
-    this.keepAlive();
-
     this.ws.wss.on('pong', this._listener = (_ws, message) => {
       if (this.ws === _ws) {
         const responseIndex = Number(message);
@@ -30,11 +28,11 @@ class KeepAlive {
     });
   }
 
-  keepAlive() {
+  start() {
     this.timer = setTimeout(() => {
       this.ws.ping(String(++this.currentIndex));
       if (this.tryCount <= 3) {
-        this.keepAlive();
+        this.start();
       } else {
         this.ws.close();
         this.destroy();
@@ -92,6 +90,7 @@ export default class WebSocket {
   wss: WebSocketServer;
   socket: stream.Duplex;
 
+  private isContinueGetData: boolean;
   private bufferedBytes: number; // 所有缓存 buffer 的字节数
   private buffers: Buffer[]; // 所有缓存的buffer
   private fragments: Buffer[]; // 保存分片内容
@@ -109,6 +108,7 @@ export default class WebSocket {
     this.wss = wss;
     this.socket = socket;
 
+    this.isContinueGetData = false;
     this.bufferedBytes = 0;
     this.buffers = [];
     this.fragments = [];
@@ -122,17 +122,14 @@ export default class WebSocket {
 
     this.init();
     this.keepAlive = new KeepAlive(this);
+    // this.keepAlive.start();
   }
 
   init() {
     this.socket.on('data', (chunk) => {
       this.append(chunk);
     });
-    this.socket.on('close', () => {
-      this.close();
-    });
     this.socket.on('error', (err: Error) => {
-      console.error(err);
       this.wss.emit('error', err);
     });
   }
@@ -148,7 +145,9 @@ export default class WebSocket {
     this.bufferedBytes += chunk.length;
     this.buffers.push(chunk);
 
-    this.getInfo();
+    if (!this.isContinueGetData) {
+      this.getInfo();
+    }
     this.getData();
   }
 
@@ -161,7 +160,8 @@ export default class WebSocket {
 
     // Tips: 一个字节有8位； `&` 运算符，只有2个位都为1时，才会1，否则为0
     this.fin = (buffer[0] & 0b10000000) === 0b10000000; // 取第1位，判断为0还是1
-    this.opcode = buffer[0] & 0b00001111; // 取第4-8位
+    const opcode = buffer[0] & 0b00001111; // 取第4-8位
+    this.opcode = opcode === 0x00 ? this.opcode : opcode; // 0x00 表示当时是片段延续，使用之前的 opcode
     this.masked = (buffer[1] & 0b10000000) === 0b10000000;  // 取第9位，判断为0还是1（Mask）
 
     // https://developer.mozilla.org/zh-CN/docs/Web/API/WebSockets_API/Writing_WebSocket_servers#%E8%A7%A3%E7%A0%81%E6%9C%89%E6%95%88%E8%BD%BD%E8%8D%B7%E9%95%BF%E5%BA%A6
@@ -183,12 +183,20 @@ export default class WebSocket {
   }
 
   getData() {
-    const data = this.consume(this.payloadLength);
-    if (this.masked) {
-      this.mask(data, this.maskingKey!);
-    }
-    if (data.length > 0) {
-      this.fragments.push(data);
+    let data = Buffer.alloc(0);
+    if (this.payloadLength > 0) {
+      if (this.bufferedBytes < this.payloadLength) {
+        // 等待所有片段传输完成再处理
+        this.isContinueGetData = true;
+        return;
+      } else {
+        this.isContinueGetData = false;
+      }
+
+      data = this.consume(this.payloadLength);
+      if (this.masked) {
+        this.mask(data, this.maskingKey!);
+      }
     }
 
     if (this.opcode >= 0x08) { // control frames
@@ -198,18 +206,35 @@ export default class WebSocket {
       return;
     }
 
+    this.fragments.push(data);
+
     if (this.fin) { // 分片是否已经结束
-      let message: unknown;
+      let message = this.concatBuffer(this.fragments);
       if (this.opcode === 0x02) { // 二进制数据
-        // TODO
+        this.wss.emit('message', this, message);
       } else { // 文本数据
-        message = this.fragments.map(item => item.toString()).join('');
+        this.wss.emit('message', this, message.toString());
       }
-      this.wss.emit('message', this, message);
+
 
       this.totalPayloadLength = 0;
       this.fragments = [];
     }
+  }
+
+  concatBuffer(buffers: Buffer[]): Buffer {
+    let res = Buffer.alloc(0);
+    if (buffers.length > 1) {
+      res = Buffer.allocUnsafe(this.totalPayloadLength);
+      let offset = 0;
+      this.fragments.forEach(item => {
+        res.set(item, offset);
+        offset += item.length;
+      });
+    } else if (buffers.length === 1) {
+      res = buffers[0];
+    }
+    return res;
   }
 
   /**
@@ -218,13 +243,10 @@ export default class WebSocket {
    */
   handleControlFrames(data: Buffer) {
     if (this.opcode === 0x08) { // disconnect
-
       const code = data.slice(0, 2).readUInt16BE(0);
       const reason = data.slice(2).toString();
 
-      this.wss.emit('disconnect', this, code, reason);
-      this.socket.end();
-      this.close();
+      this.close(code, reason);
       return;
     }
 
@@ -294,10 +316,12 @@ export default class WebSocket {
    * @param data
    * @param masked
    * @param opcode
+   * @param fin
    */
   buildFrame(data: Buffer, {
     masked = false,
     opcode = 0,
+    fin = false
   } = {}) {
     const length = data.length;
     let payloadLength = length;
@@ -317,7 +341,7 @@ export default class WebSocket {
     const buffer = Buffer.allocUnsafe(offset + length);
 
     // 写入第一个8位
-    buffer[0] = 0b10000000 | opcode;
+    buffer[0] = (fin ? 0b10000000 : 0b00000000) | opcode;
     // 写入第二个8位
     buffer[1] = (masked ? 0b10000000 : 0b00000000) | payloadLength;
 
@@ -346,43 +370,79 @@ export default class WebSocket {
     return buffer;
   }
 
-  close() {
-    this.socket.destroy();
+  close(code = 1001, reason = 'Unknown Reason') {
     this.keepAlive.destroy();
     this.wss.sockets.delete(this.socket);
-    this.wss.emit('close', this);
+    this.wss.emit('disconnect', this, code, reason);
+    this.socket.destroy();
   }
 
-  broadcast(message: any) {
-    this.wss.send(message);
+  broadcast(message: any | Buffer[], isBinary = false) {
+    this.wss.send(message, isBinary);
   }
 
-  send(message: any, {
-    isBinary = false,
-    opcode
-  }: { isBinary?: boolean, opcode?: number } = {}) {
-    if (isBinary) {
-      opcode = opcode ?? 0x02;
-    } else {
-      message = String(message);
-      opcode = opcode ?? 0x01;
+  send(message: any | Buffer[], isBinary = false) {
+    // const a = message.slice(0, 5);
+    // const b = message.slice(5);
+    // this.sendFrame(Buffer.from(a), {
+    //     opcode: 0x01,
+    //     fin: false
+    //   }
+    // );
+    // this.sendFrame(Buffer.from(b), {
+    //     opcode: 0x00,
+    //     fin: true
+    //   }
+    // );
+    //
+    // return;
+    if (!Array.isArray(message)) {
+      message = [message];
     }
 
-    const buffer = Buffer.isBuffer(message) ? message : Buffer.from(message);
+    let opcode = isBinary ? 0x02 : 0x01;
+    let isFragments = message.length > 1;
+    for (let i = 0; i < message.length; i++) {
+      let item = message[i];
+      if (!isBinary) {
+        item = String(item);
+      }
+
+      this.sendFrame(
+        Buffer.isBuffer(item) ? item : Buffer.from(item),
+        {
+          opcode: (isFragments && i > 0) ? 0x00 : opcode,
+          fin: i === message.length - 1
+        }
+      );
+    }
+  }
+
+  sendFrame(buffer: Buffer, {opcode, fin}: {
+    opcode: number,
+    fin: boolean
+  }) {
     this.socket.write(
       this.buildFrame(buffer, {
         // https://datatracker.ietf.org/doc/html/rfc6455#section-5.1
         masked: false, // 服务端发送不能使用掩码
-        opcode
+        opcode,
+        fin
       })
     );
   }
 
   ping(message = '') {
-    this.send(message, {opcode: 0x09});
+    this.sendFrame(Buffer.from(message), {
+      opcode: 0x09,
+      fin: true
+    });
   }
 
   pong(message = '') {
-    this.send(message, {opcode: 0x0A});
+    this.sendFrame(Buffer.from(message), {
+      opcode: 0x0A,
+      fin: true
+    });
   }
 }

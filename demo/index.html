@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
   <meta http-equiv="X-UA-Compatible" content="ie=edge">
   <title>Tiny Websocket Demo</title>
+  <link rel="stylesheet" href="https://g.alicdn.com/code/lib/antd/4.16.3/antd.min.css">
 </head>
 <body>
 <style>
@@ -16,34 +17,13 @@
   }
 
   * {
-    box-sizing: border-box;
+    transition: none !important;
   }
 
-  input {
-    height: 32px;
-    padding: 0 5px;
-    outline: none;
-    border: 1px solid #40a9ff;
-    border-radius: 2px;
-    outline: 0;
-    box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2);
-  }
-
-  button {
-    height: 32px;
-    margin-left: 5px;
-    outline: none;
-    border: 1px solid #1890ff;
-    background: #1890ff;
-    cursor: pointer;
-    color: #fff;
-    font-size: 14px;
-    border-radius: 2px;
-  }
-
-  button:hover {
-    background: #40a9ff;
-    border-color: #40a9ff;;
+  .nickname {
+    color: #e91e63;
+    margin: 5px 0;
+    font-weight: 500;
   }
 
   #logs {
@@ -61,7 +41,7 @@
     margin: 0;
     color: #333;
     font-size: 13px;
-    line-height: 1.4;
+    line-height: 1.5;
     word-break: break-all;
     min-height: 18px;
   }
@@ -69,15 +49,21 @@
   #logs .head {
     font-weight: 500;
     margin-right: 5px;
+    color: #03a9f4;
   }
 </style>
 
 <div id="app">
-  <h2>Tiny Websocket Demo (<a target="_blank" href="https://github.com/peakchen90/tiny-websocket">Github</a>)</h2>
+  <h2 style="margin-top: 20px;">Tiny Websocket Demo (<a target="_blank" href="https://github.com/peakchen90/tiny-websocket">Github</a>)</h2>
+  <div class="nickname">昵称：<span id="nickname"> <!-- nickname --> </span></div>
   <form id="form">
-    <input style="width: 90px; margin-right: 5px;" id="nickname" type="text" placeholder="昵称" autocomplete="off"/>
-    <input style="width: 300px;" id="content" type="text" placeholder="消息内容" autocomplete="off"/>
-    <button type="submit" style="width: 80px;">发送</button>
+    <input class="ant-input" style="width: 320px;" id="content" type="text" placeholder="消息内容" autocomplete="off"/>
+    <button class="ant-btn ant-btn-primary" type="submit" style="">发送</button>
+
+    <input id="image" type="file" accept=".jpg,.jpeg,.png,.gif" style="display: none;"/>
+    <label for="image">
+      <span class="ant-btn ant-btn-primary ant-btn-background-ghost" style="margin-left: 12px;">发送图片</span>
+    </label>
   </form>
 
   <div id="logs">
