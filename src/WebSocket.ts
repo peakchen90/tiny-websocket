@@ -382,20 +382,6 @@ export default class WebSocket {
   }
 
   send(message: any | Buffer[], isBinary = false) {
-    // const a = message.slice(0, 5);
-    // const b = message.slice(5);
-    // this.sendFrame(Buffer.from(a), {
-    //     opcode: 0x01,
-    //     fin: false
-    //   }
-    // );
-    // this.sendFrame(Buffer.from(b), {
-    //     opcode: 0x00,
-    //     fin: true
-    //   }
-    // );
-    //
-    // return;
     if (!Array.isArray(message)) {
       message = [message];
     }
