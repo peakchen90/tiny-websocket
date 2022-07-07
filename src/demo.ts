@@ -8,7 +8,7 @@ const server = http.createServer();
 const wss = new WebSocketServer(server);
 
 const PUBLIC_ROOT = path.join(__dirname, '../public');
-const PORT = 5555;
+const PORT = 3333;
 
 let uid = 0;
 

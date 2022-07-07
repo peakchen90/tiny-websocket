@@ -11,6 +11,7 @@ export default class WebSocketServer extends EventEmitter {
 
   constructor(server: http.Server) {
     super();
+
     this.server = server;
     this.sockets = new Map();
 
@@ -24,7 +25,7 @@ export default class WebSocketServer extends EventEmitter {
     });
   }
 
-  handleUpgrade(req: http.IncomingMessage, socket: stream.Duplex) {
+  private handleUpgrade(req: http.IncomingMessage, socket: stream.Duplex) {
     const key = req.headers['sec-websocket-key']?.trim() || '';
     const version = Number(req.headers['sec-websocket-version']);
 
@@ -42,17 +43,60 @@ export default class WebSocketServer extends EventEmitter {
       return;
     }
 
+    const MAGIC_GUID = '258EAFA5-E914-47DA-95CA-C5AB0DC85B11';
+    const hashKey = createHash('sha1')
+      .update(key + MAGIC_GUID)
+      .digest('base64');
+
     const chunks = [
       'HTTP/1.1 101 Switching Protocols',
       'Upgrade: websocket',
       'Connection: Upgrade',
-      `Sec-WebSocket-Accept: ${this.hash(key)}`,
+      `Sec-WebSocket-Accept: ${hashKey}`,
       '\r\n',
     ];
     socket.write(chunks.join('\r\n'));
-    const ws = new WebSocket(this, socket);
+    const ws = new WebSocket(this, socket, 'server');
     this.sockets.set(socket, ws);
     this.emit('connection', ws);
+
+    let isClosed = false;
+    const handleCloseSocket = () => {
+      if (!isClosed) {
+        isClosed = true;
+        ws.close();
+      }
+    };
+    socket.on('error', () => handleCloseSocket());
+    socket.on('close', () => handleCloseSocket());
+    socket.on('end', () => handleCloseSocket());
+  }
+
+  private abortHandShake(
+    socket: stream.Duplex,
+    code: number,
+    message?: string,
+    headers?: Record<string, any>
+  ) {
+    if (socket.writable) {
+      message = message || http.STATUS_CODES[code];
+      headers = {
+        Connection: 'close',
+        'Content-Type': 'text/html',
+        'Content-Length': Buffer.byteLength(message!),
+        ...headers,
+      };
+
+      let chunk = `HTTP/1.1 ${code} ${http.STATUS_CODES[code]}\r\n`;
+      chunk += Object.keys(headers)
+        .map((key) => `${key}: ${headers![key]}`)
+        .join('\r\n');
+      chunk += `\r\n\r\n${message}`;
+
+      socket.write(chunk);
+    }
+
+    socket.destroy();
   }
 
   on(event: 'connection', listener: (ws: WebSocket) => void): this;
@@ -95,39 +139,5 @@ export default class WebSocketServer extends EventEmitter {
     this.sockets.forEach((ws) => {
       ws.close();
     });
-  }
-
-  hash(value: string): string {
-    const MAGIC_GUID = '258EAFA5-E914-47DA-95CA-C5AB0DC85B11';
-    return createHash('sha1')
-      .update(value + MAGIC_GUID)
-      .digest('base64');
-  }
-
-  abortHandShake(
-    socket: stream.Duplex,
-    code: number,
-    message?: string,
-    headers?: Record<string, any>
-  ) {
-    if (socket.writable) {
-      message = message || http.STATUS_CODES[code];
-      headers = {
-        Connection: 'close',
-        'Content-Type': 'text/html',
-        'Content-Length': Buffer.byteLength(message!),
-        ...headers,
-      };
-
-      let chunk = `HTTP/1.1 ${code} ${http.STATUS_CODES[code]}\r\n`;
-      chunk += Object.keys(headers)
-        .map((key) => `${key}: ${headers![key]}`)
-        .join('\r\n');
-      chunk += `\r\n\r\n${message}`;
-
-      socket.write(chunk);
-    }
-
-    socket.destroy();
   }
 }

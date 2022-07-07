@@ -12,7 +12,7 @@ yarn install
 yarn demo
 ```
 
-> 然后在浏览器中打开 `http://127.0.0.1:5555`
+> 然后在浏览器中打开 `http://127.0.0.1:3333`
 
 ## Features
 

@@ -11,7 +11,7 @@ const nick =
 nickname.innerText = nick;
 localStorage.setItem('tiny_ws_username', nick);
 
-const ws = new WebSocket('ws://127.0.0.1:5555');
+const ws = new WebSocket('ws://127.0.0.1:3333');
 ws.binaryType = 'arraybuffer';
 
 window.ws = ws;

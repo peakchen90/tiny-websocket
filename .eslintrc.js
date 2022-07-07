@@ -14,6 +14,7 @@ module.exports = {
   },
   rules: {
     '@typescript-eslint/explicit-member-accessibility': 'off',
+    '@typescript-eslint/no-parameter-properties': 'off',
     '@typescript-eslint/no-inferrable-types': 'off',
     '@typescript-eslint/no-require-imports': 'off',
     '@typescript-eslint/no-empty-interface': 'off',
@@ -28,6 +29,7 @@ module.exports = {
     'no-param-reassign': 'off',
     'prefer-template': 'error',
     'eqeqeq': 'off',
+    'no-new': 'off',
     'no-eq-null': 'off',
     'max-params': 'off',
     'no-return-assign': 'off',

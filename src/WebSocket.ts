@@ -5,6 +5,8 @@ import EventEmitter from 'events';
 
 export type MessageType = any | Buffer;
 
+export type WebSocketType = 'server' | 'client';
+
 class KeepAlive {
   ws: WebSocket;
 
@@ -95,6 +97,8 @@ const MASKING_BUFFER = Buffer.alloc(4);
 
 export default class WebSocket {
   host: EventEmitter;
+  type: WebSocketType;
+  closed: boolean;
   socket: stream.Duplex;
 
   private isContinueGetData: boolean;
@@ -111,8 +115,15 @@ export default class WebSocket {
 
   private keepAlive: KeepAlive;
 
-  constructor(host: EventEmitter, socket: stream.Duplex) {
+  constructor(
+    host: EventEmitter,
+    socket: stream.Duplex,
+    type: WebSocketType,
+    keepAlive = false
+  ) {
     this.host = host;
+    this.type = type;
+    this.closed = false;
     this.socket = socket;
 
     this.isContinueGetData = false;
@@ -128,16 +139,16 @@ export default class WebSocket {
     this.totalPayloadLength = 0;
 
     this.init();
+
     this.keepAlive = new KeepAlive(this);
-    this.keepAlive.start();
+    if (keepAlive) {
+      this.keepAlive.start();
+    }
   }
 
   init() {
     this.socket.on('data', (chunk) => {
       this.append(chunk);
-    });
-    this.socket.on('error', (err: Error) => {
-      this.host.emit('error', err);
     });
   }
 
@@ -382,9 +393,12 @@ export default class WebSocket {
   }
 
   close(code = 1001, reason = 'Unknown Reason') {
-    this.keepAlive.destroy();
-    this.host.emit('disconnect', this, code, reason);
-    this.socket.destroy();
+    if (!this.closed) {
+      this.closed = true;
+      this.keepAlive.destroy();
+      this.host.emit('disconnect', this, code, reason);
+      this.socket.destroy();
+    }
   }
 
   send(message: MessageType | MessageType[], isBinary = false) {
@@ -407,20 +421,11 @@ export default class WebSocket {
     }
   }
 
-  sendFrame(
-    buffer: Buffer,
-    {
-      opcode,
-      fin,
-    }: {
-      opcode: number;
-      fin: boolean;
-    }
-  ) {
+  sendFrame(buffer: Buffer, { opcode, fin }: { opcode: number; fin: boolean }) {
     this.socket.write(
       this.buildFrame(buffer, {
         // https://datatracker.ietf.org/doc/html/rfc6455#section-5.1
-        masked: false, // 服务端发送不能使用掩码
+        masked: this.type !== 'server', // 服务端发送不能使用掩码
         opcode,
         fin,
       })
