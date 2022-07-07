@@ -1,11 +1,11 @@
 {
   "name": "tiny-websocket",
   "version": "1.0.0",
+  "private": true,
   "main": "index.js",
   "scripts": {
-    "start": "tsc -w",
     "build": "tsc",
-    "demo": "node ./dist/demo.js"
+    "demo": "ts-node src/demo.ts"
   },
   "husky": {
     "hooks": {
@@ -21,7 +21,14 @@
   "repository": "git@github.com:peakchen90/tiny-websocket.git",
   "author": "peakchen90 <1558267774@qq.com>",
   "license": "MIT",
+  "dependencies": {
+    "fs-extra": "^10.1.0",
+    "mime-types": "^2.1.35"
+  },
   "devDependencies": {
+    "@swc/wasm": "^1.2.210",
+    "@types/fs-extra": "^9.0.13",
+    "@types/mime-types": "^2.1.1",
     "@types/node": "^15.12.2",
     "@typescript-eslint/eslint-plugin": "^4.27.0",
     "@typescript-eslint/parser": "^4.27.0",
@@ -32,6 +39,7 @@
     "husky": "^6.0.0",
     "lint-staged": "^11.0.0",
     "prettier": "^2.7.1",
+    "ts-node": "^10.8.2",
     "typescript": "^4.3.2"
   },
   "prettier": {

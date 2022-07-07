@@ -1,8 +1,14 @@
 import http from 'http';
 import WebSocketServer from './WebSocketServer';
+import path from 'path';
+import fs from 'fs-extra';
+import mime from 'mime-types';
 
 const server = http.createServer();
 const wss = new WebSocketServer(server);
+
+const PUBLIC_ROOT = path.join(__dirname, '../public');
+const PORT = 5555;
 
 let uid = 0;
 
@@ -43,4 +49,33 @@ wss.on('disconnect', (sender) => {
   );
 });
 
-server.listen(5555);
+// public static assets
+server.on('request', (req: http.IncomingMessage, res: http.ServerResponse) => {
+  let url = req.url;
+  const searchIndex = url?.indexOf('?');
+  if (searchIndex != null && searchIndex >= 0) {
+    url = url?.slice(0, searchIndex);
+  }
+  if (!url || url === '/') {
+    url = '/index.html';
+  }
+
+  const filename = path.join(PUBLIC_ROOT, url);
+  if (fs.pathExistsSync(filename)) {
+    res.statusCode = 200;
+    res.setHeader('Content-Type', mime.lookup(filename) || 'text/plain');
+    res.setHeader('Cache-Control', 'max-age=0');
+    res.write(fs.readFileSync(filename));
+    res.end();
+  } else {
+    res.statusCode = 404;
+    res.statusMessage = 'Not Found';
+    res.end('404 Not Found');
+  }
+});
+
+server.on('listening', () => {
+  console.log(`服务启动成功: http://127.0.0.1:${PORT}`);
+});
+
+server.listen(PORT);

@@ -1,8 +1,7 @@
 import EventEmitter from 'events';
-import * as http from 'http';
-import * as stream from 'stream';
+import http from 'http';
+import stream from 'stream';
 import { Buffer } from 'buffer';
-import { STATUS_CODES } from 'http';
 import { createHash } from 'crypto';
 import WebSocket, { MessageType } from './WebSocket';
 
@@ -112,7 +111,7 @@ export default class WebSocketServer extends EventEmitter {
     headers?: Record<string, any>
   ) {
     if (socket.writable) {
-      message = message || STATUS_CODES[code];
+      message = message || http.STATUS_CODES[code];
       headers = {
         Connection: 'close',
         'Content-Type': 'text/html',
@@ -120,7 +119,7 @@ export default class WebSocketServer extends EventEmitter {
         ...headers,
       };
 
-      let chunk = `HTTP/1.1 ${code} ${STATUS_CODES[code]}\r\n`;
+      let chunk = `HTTP/1.1 ${code} ${http.STATUS_CODES[code]}\r\n`;
       chunk += Object.keys(headers)
         .map((key) => `${key}: ${headers![key]}`)
         .join('\r\n');

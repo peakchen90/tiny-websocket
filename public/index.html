@@ -6,52 +6,52 @@
   <meta http-equiv="X-UA-Compatible" content="ie=edge">
   <title>Tiny Websocket Demo</title>
   <link rel="stylesheet" href="https://g.alicdn.com/code/lib/antd/4.16.3/antd.min.css">
+  <style>
+    #app {
+      width: 500px;
+      margin: auto;
+      font-family: -apple-system, 'Helvetica Neue', Helvetica, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+      font-size: 14px;
+    }
+
+    * {
+      transition: none !important;
+    }
+
+    .nickname {
+      color: #e91e63;
+      margin: 5px 0;
+      font-weight: 500;
+    }
+
+    #logs {
+      width: 500px;
+      height: 400px;
+      background: #f5f5f5;
+      border-radius: 5px;
+      padding: 10px;
+      margin-top: 30px;
+      border: 1px solid #eee;
+      overflow: auto;
+    }
+
+    #logs p {
+      margin: 0;
+      color: #333;
+      font-size: 13px;
+      line-height: 1.5;
+      word-break: break-all;
+      min-height: 18px;
+    }
+
+    #logs .head {
+      font-weight: 500;
+      margin-right: 5px;
+      color: #03a9f4;
+    }
+  </style>
 </head>
 <body>
-<style>
-  #app {
-    width: 500px;
-    margin: auto;
-    font-family: -apple-system, 'Helvetica Neue', Helvetica, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
-    font-size: 14px;
-  }
-
-  * {
-    transition: none !important;
-  }
-
-  .nickname {
-    color: #e91e63;
-    margin: 5px 0;
-    font-weight: 500;
-  }
-
-  #logs {
-    width: 500px;
-    height: 400px;
-    background: #f5f5f5;
-    border-radius: 5px;
-    padding: 10px;
-    margin-top: 30px;
-    border: 1px solid #eee;
-    overflow: auto;
-  }
-
-  #logs p {
-    margin: 0;
-    color: #333;
-    font-size: 13px;
-    line-height: 1.5;
-    word-break: break-all;
-    min-height: 18px;
-  }
-
-  #logs .head {
-    font-weight: 500;
-    margin-right: 5px;
-    color: #03a9f4;
-  }
-</style>
 
 <div id="app">
   <h2 style="margin-top: 20px;">Tiny Websocket Demo (<a target="_blank" href="https://github.com/peakchen90/tiny-websocket">Github</a>)</h2>
