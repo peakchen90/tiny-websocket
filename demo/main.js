@@ -4,7 +4,10 @@ const form = document.getElementById('form');
 const image = document.getElementById('image');
 const logs = document.getElementById('logs');
 
-const nick = localStorage.getItem('tiny_ws_username') || Math.random().toString(36).slice(2, 6).toUpperCase();
+const nick =
+  localStorage.getItem('tiny_ws_username') ||
+  Math.random().toString(36).slice(2, 6).toUpperCase();
+
 nickname.innerText = nick;
 localStorage.setItem('tiny_ws_username', nick);
 
@@ -14,10 +17,12 @@ ws.binaryType = 'arraybuffer';
 window.ws = ws;
 
 ws.onopen = () => {
-  ws.send(JSON.stringify({
-    type: 'join',
-    data: nick
-  }));
+  ws.send(
+    JSON.stringify({
+      type: 'join',
+      data: nick,
+    })
+  );
 };
 
 ws.onclose = () => {
@@ -34,7 +39,7 @@ function bufferToString(buffer, start, end) {
 
 ws.onmessage = (evt) => {
   if (typeof evt.data === 'string') {
-    const {type, username, data} = JSON.parse(evt.data);
+    const { type, username, data } = JSON.parse(evt.data);
     switch (type) {
       case 'join':
         printLog(`${data} 已加入`);
@@ -70,10 +75,12 @@ form.onsubmit = (e) => {
   e.preventDefault();
 
   const data = content.value;
-  ws.send(JSON.stringify({
-    type: 'message',
-    data
-  }));
+  ws.send(
+    JSON.stringify({
+      type: 'message',
+      data,
+    })
+  );
 
   setTimeout(() => {
     content.value = '';
@@ -81,7 +88,7 @@ form.onsubmit = (e) => {
   });
 };
 
-image.onchange = ({target}) => {
+image.onchange = ({ target }) => {
   const [file] = target.files;
 
   if (file) {
@@ -102,9 +109,7 @@ function printLog(head = '', msg = '') {
     logNode.appendChild(headNode);
   }
   logNode.appendChild(
-    (msg instanceof HTMLElement)
-      ? msg
-      : document.createTextNode(msg)
+    msg instanceof HTMLElement ? msg : document.createTextNode(msg)
   );
   logs.appendChild(logNode);
 

@@ -1,7 +1,9 @@
-import {Buffer} from 'buffer';
-import WebSocketServer from './WebSocketServer';
-import * as stream from 'stream';
-import {randomFillSync} from 'crypto';
+import { Buffer } from 'buffer';
+import stream from 'stream';
+import { randomFillSync } from 'crypto';
+import EventEmitter from 'events';
+
+export type MessageType = any | Buffer;
 
 class KeepAlive {
   ws: WebSocket;
@@ -16,16 +18,19 @@ class KeepAlive {
     this.currentIndex = 0;
     this.tryCount = 0;
 
-    this.ws.wss.on('pong', this._listener = (_ws, message) => {
-      if (this.ws === _ws) {
-        const responseIndex = Number(message);
-        if (this.currentIndex === responseIndex) {
-          this.tryCount = 0;
-        } else {
-          this.tryCount++;
+    this.ws.host.on(
+      'pong',
+      (this._listener = (_ws, message) => {
+        if (this.ws === _ws) {
+          const responseIndex = Number(message);
+          if (this.currentIndex === responseIndex) {
+            this.tryCount = 0;
+          } else {
+            this.tryCount++;
+          }
         }
-      }
-    });
+      })
+    );
   }
 
   start() {
@@ -38,13 +43,15 @@ class KeepAlive {
         this.destroy();
       }
     }, 3000);
+
+    return this;
   }
 
   destroy() {
     if (this.timer) {
       clearTimeout(this.timer);
     }
-    this.ws.wss.off('pong', this._listener);
+    this.ws.host.off('pong', this._listener);
   }
 }
 
@@ -87,7 +94,7 @@ class KeepAlive {
 const MASKING_BUFFER = Buffer.alloc(4);
 
 export default class WebSocket {
-  wss: WebSocketServer;
+  host: EventEmitter;
   socket: stream.Duplex;
 
   private isContinueGetData: boolean;
@@ -104,8 +111,8 @@ export default class WebSocket {
 
   private keepAlive: KeepAlive;
 
-  constructor(wss: WebSocketServer, socket: stream.Duplex) {
-    this.wss = wss;
+  constructor(host: EventEmitter, socket: stream.Duplex) {
+    this.host = host;
     this.socket = socket;
 
     this.isContinueGetData = false;
@@ -122,7 +129,7 @@ export default class WebSocket {
 
     this.init();
     this.keepAlive = new KeepAlive(this);
-    // this.keepAlive.start();
+    this.keepAlive.start();
   }
 
   init() {
@@ -130,7 +137,7 @@ export default class WebSocket {
       this.append(chunk);
     });
     this.socket.on('error', (err: Error) => {
-      this.wss.emit('error', err);
+      this.host.emit('error', err);
     });
   }
 
@@ -138,7 +145,8 @@ export default class WebSocket {
    * @param chunk
    */
   append(chunk: any) {
-    if (this.opcode === 0x08) { // 已断开
+    if (this.opcode === 0x08) {
+      // 已断开
       return;
     }
 
@@ -162,10 +170,10 @@ export default class WebSocket {
     this.fin = (buffer[0] & 0b10000000) === 0b10000000; // 取第1位，判断为0还是1
     const opcode = buffer[0] & 0b00001111; // 取第4-8位
     this.opcode = opcode === 0x00 ? this.opcode : opcode; // 0x00 表示当时是片段延续，使用之前的 opcode
-    this.masked = (buffer[1] & 0b10000000) === 0b10000000;  // 取第9位，判断为0还是1（Mask）
+    this.masked = (buffer[1] & 0b10000000) === 0b10000000; // 取第9位，判断为0还是1（Mask）
 
     // https://developer.mozilla.org/zh-CN/docs/Web/API/WebSockets_API/Writing_WebSocket_servers#%E8%A7%A3%E7%A0%81%E6%9C%89%E6%95%88%E8%BD%BD%E8%8D%B7%E9%95%BF%E5%BA%A6
-    this.payloadLength = buffer[1] & 0b01111111;  // 取第10-16位（Payload len）
+    this.payloadLength = buffer[1] & 0b01111111; // 取第10-16位（Payload len）
     if (this.payloadLength === 126) {
       // 通过大端序方式（高位在前，低位在后）读取16位无符号整数
       this.payloadLength = this.consume(2).readUInt16BE(0);
@@ -199,7 +207,8 @@ export default class WebSocket {
       }
     }
 
-    if (this.opcode >= 0x08) { // control frames
+    if (this.opcode >= 0x08) {
+      // control frames
       this.handleControlFrames(data);
       this.totalPayloadLength = 0;
       this.fragments = [];
@@ -208,14 +217,16 @@ export default class WebSocket {
 
     this.fragments.push(data);
 
-    if (this.fin) { // 分片是否已经结束
+    if (this.fin) {
+      // 分片是否已经结束
       let message = this.concatBuffer(this.fragments);
-      if (this.opcode === 0x02) { // 二进制数据
-        this.wss.emit('message', this, message);
-      } else { // 文本数据
-        this.wss.emit('message', this, message.toString());
+      if (this.opcode === 0x02) {
+        // 二进制数据
+        this.host.emit('message', this, message);
+      } else {
+        // 文本数据
+        this.host.emit('message', this, message.toString());
       }
-
 
       this.totalPayloadLength = 0;
       this.fragments = [];
@@ -227,7 +238,7 @@ export default class WebSocket {
     if (buffers.length > 1) {
       res = Buffer.allocUnsafe(this.totalPayloadLength);
       let offset = 0;
-      this.fragments.forEach(item => {
+      this.fragments.forEach((item) => {
         res.set(item, offset);
         offset += item.length;
       });
@@ -242,7 +253,8 @@ export default class WebSocket {
    * @see https://datatracker.ietf.org/doc/html/rfc6455#section-5.5
    */
   handleControlFrames(data: Buffer) {
-    if (this.opcode === 0x08) { // disconnect
+    if (this.opcode === 0x08) {
+      // disconnect
       const code = data.slice(0, 2).readUInt16BE(0);
       const reason = data.slice(2).toString();
 
@@ -251,14 +263,15 @@ export default class WebSocket {
     }
 
     const message = data.toString();
-    if (this.opcode === 0x09) { // ping
-      this.wss.emit('ping', this, message);
+    if (this.opcode === 0x09) {
+      // ping
+      this.host.emit('ping', this, message);
       this.pong(message);
-    } else if (this.opcode === 0x0A) { // pong
-      this.wss.emit('pong', this, message);
+    } else if (this.opcode === 0x0a) {
+      // pong
+      this.host.emit('pong', this, message);
     }
   }
-
 
   /**
    * 加密/解密 掩码
@@ -318,11 +331,7 @@ export default class WebSocket {
    * @param opcode
    * @param fin
    */
-  buildFrame(data: Buffer, {
-    masked = false,
-    opcode = 0,
-    fin = false
-  } = {}) {
+  buildFrame(data: Buffer, { masked = false, opcode = 0, fin = false } = {}) {
     const length = data.length;
     let payloadLength = length;
     let offset = 2; // 保留头部信息字节数
@@ -330,10 +339,12 @@ export default class WebSocket {
       offset += 4;
     }
 
-    if (length > 0b11111111_11111111) { // 长度大于`16位最大整数`，使用64位无符号整数
+    if (length > 0b11111111_11111111) {
+      // 长度大于`16位最大整数`，使用64位无符号整数
       payloadLength = 127;
       offset += 8;
-    } else if (length > 125) { // 长度大于125, 使用16位无符号整数
+    } else if (length > 125) {
+      // 长度大于125, 使用16位无符号整数
       payloadLength = 126;
       offset += 2;
     }
@@ -372,16 +383,11 @@ export default class WebSocket {
 
   close(code = 1001, reason = 'Unknown Reason') {
     this.keepAlive.destroy();
-    this.wss.sockets.delete(this.socket);
-    this.wss.emit('disconnect', this, code, reason);
+    this.host.emit('disconnect', this, code, reason);
     this.socket.destroy();
   }
 
-  broadcast(message: any | Buffer[], isBinary = false) {
-    this.wss.send(message, isBinary);
-  }
-
-  send(message: any | Buffer[], isBinary = false) {
+  send(message: MessageType | MessageType[], isBinary = false) {
     if (!Array.isArray(message)) {
       message = [message];
     }
@@ -394,26 +400,29 @@ export default class WebSocket {
         item = String(item);
       }
 
-      this.sendFrame(
-        Buffer.isBuffer(item) ? item : Buffer.from(item),
-        {
-          opcode: (isFragments && i > 0) ? 0x00 : opcode,
-          fin: i === message.length - 1
-        }
-      );
+      this.sendFrame(Buffer.isBuffer(item) ? item : Buffer.from(item), {
+        opcode: isFragments && i > 0 ? 0x00 : opcode,
+        fin: i === message.length - 1,
+      });
     }
   }
 
-  sendFrame(buffer: Buffer, {opcode, fin}: {
-    opcode: number,
-    fin: boolean
-  }) {
+  sendFrame(
+    buffer: Buffer,
+    {
+      opcode,
+      fin,
+    }: {
+      opcode: number;
+      fin: boolean;
+    }
+  ) {
     this.socket.write(
       this.buildFrame(buffer, {
         // https://datatracker.ietf.org/doc/html/rfc6455#section-5.1
         masked: false, // 服务端发送不能使用掩码
         opcode,
-        fin
+        fin,
       })
     );
   }
@@ -421,14 +430,14 @@ export default class WebSocket {
   ping(message = '') {
     this.sendFrame(Buffer.from(message), {
       opcode: 0x09,
-      fin: true
+      fin: true,
     });
   }
 
   pong(message = '') {
     this.sendFrame(Buffer.from(message), {
-      opcode: 0x0A,
-      fin: true
+      opcode: 0x0a,
+      fin: true,
     });
   }
 }

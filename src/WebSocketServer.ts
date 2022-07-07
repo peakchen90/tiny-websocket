@@ -1,14 +1,14 @@
 import EventEmitter from 'events';
 import * as http from 'http';
 import * as stream from 'stream';
-import {Buffer} from 'buffer';
-import {STATUS_CODES} from 'http';
-import {createHash} from 'crypto';
-import WebSocket from './WebSocket';
+import { Buffer } from 'buffer';
+import { STATUS_CODES } from 'http';
+import { createHash } from 'crypto';
+import WebSocket, { MessageType } from './WebSocket';
 
 export default class WebSocketServer extends EventEmitter {
   server: http.Server;
-  sockets: Map<stream.Duplex, WebSocket>
+  sockets: Map<stream.Duplex, WebSocket>;
 
   constructor(server: http.Server) {
     super();
@@ -32,7 +32,7 @@ export default class WebSocketServer extends EventEmitter {
     if (
       req.headers.upgrade?.toLowerCase() !== 'websocket' ||
       req.method !== 'GET' ||
-      (version !== 13)
+      version !== 13
     ) {
       this.abortHandShake(socket, 400);
     }
@@ -48,7 +48,7 @@ export default class WebSocketServer extends EventEmitter {
       'Upgrade: websocket',
       'Connection: Upgrade',
       `Sec-WebSocket-Accept: ${this.hash(key)}`,
-      '\r\n'
+      '\r\n',
     ];
     socket.write(chunks.join('\r\n'));
     const ws = new WebSocket(this, socket);
@@ -57,57 +57,73 @@ export default class WebSocketServer extends EventEmitter {
   }
 
   on(event: 'connection', listener: (ws: WebSocket) => void): this;
-  on(event: 'disconnect', listener: (ws: WebSocket, code: number, reason: string) => void): this;
+  on(
+    event: 'disconnect',
+    listener: (ws: WebSocket, code: number, reason: string) => void
+  ): this;
   on(event: 'ping', listener: (ws: WebSocket, message: string) => void): this;
   on(event: 'pong', listener: (ws: WebSocket, message: string) => void): this;
-  on(event: 'message', listener: (sender: WebSocket, message: string | Buffer) => void): this;
+  on(
+    event: 'message',
+    listener: (sender: WebSocket, message: string | Buffer) => void
+  ): this;
   on(event: string | symbol, listener: (...args: any[]) => void): this {
     return super.on(event, listener);
   }
 
   off(event: 'connection', listener: (ws: WebSocket) => void): this;
-  off(event: 'disconnect', listener: (ws: WebSocket, code: number, reason: string) => void): this;
+  off(
+    event: 'disconnect',
+    listener: (ws: WebSocket, code: number, reason: string) => void
+  ): this;
   off(event: 'ping', listener: (ws: WebSocket, message: string) => void): this;
   off(event: 'pong', listener: (ws: WebSocket, message: string) => void): this;
-  off(event: 'message', listener: (sender: WebSocket, message: string | Buffer) => void): this;
+  off(
+    event: 'message',
+    listener: (sender: WebSocket, message: string | Buffer) => void
+  ): this;
   off(event: string | symbol, listener: (...args: any[]) => void): this {
     return super.off(event, listener);
   }
 
-  send(message: any | Buffer[], isBinary = false, socket?: stream.Duplex) {
-    if (socket) {
-      const target = this.sockets.get(socket);
-      target?.send(message, isBinary);
-    } else {
-      this.sockets.forEach(ws => {
-        ws.send(message, isBinary);
-      });
-    }
+  broadcast(message: MessageType | MessageType[], isBinary = false) {
+    this.sockets.forEach((ws) => {
+      ws.send(message, isBinary);
+    });
   }
 
   close() {
-    this.sockets.forEach(ws => {
+    this.sockets.forEach((ws) => {
       ws.close();
     });
   }
 
   hash(value: string): string {
     const MAGIC_GUID = '258EAFA5-E914-47DA-95CA-C5AB0DC85B11';
-    return createHash('sha1').update(value + MAGIC_GUID).digest('base64');
+    return createHash('sha1')
+      .update(value + MAGIC_GUID)
+      .digest('base64');
   }
 
-  abortHandShake(socket: stream.Duplex, code: number, message?: string, headers?: Record<string, any>) {
+  abortHandShake(
+    socket: stream.Duplex,
+    code: number,
+    message?: string,
+    headers?: Record<string, any>
+  ) {
     if (socket.writable) {
       message = message || STATUS_CODES[code];
       headers = {
         Connection: 'close',
         'Content-Type': 'text/html',
         'Content-Length': Buffer.byteLength(message!),
-        ...headers
+        ...headers,
       };
 
       let chunk = `HTTP/1.1 ${code} ${STATUS_CODES[code]}\r\n`;
-      chunk += Object.keys(headers).map(key => `${key}: ${headers![key]}`).join('\r\n');
+      chunk += Object.keys(headers)
+        .map((key) => `${key}: ${headers![key]}`)
+        .join('\r\n');
       chunk += `\r\n\r\n${message}`;
 
       socket.write(chunk);

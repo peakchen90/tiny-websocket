@@ -1,7 +1,8 @@
 module.exports = {
   extends: [
     'alloy',
-    'alloy/typescript'
+    'alloy/typescript',
+    'plugin:prettier/recommended'
   ],
   env: {
     browser: true,
@@ -19,17 +20,15 @@ module.exports = {
     '@typescript-eslint/member-ordering': 'off',
     '@typescript-eslint/consistent-type-assertions': 'off',
     '@typescript-eslint/interface-name-prefix': 'off',
-    '@typescript-eslint/no-unused-vars': 'error',
+    '@typescript-eslint/no-unused-vars': 'warn',
     '@typescript-eslint/no-useless-constructor': 'error',
     '@typescript-eslint/prefer-for-of': 'off',
     '@typescript-eslint/unified-signatures': 'off',
     'no-useless-constructor': 'off',
     'no-param-reassign': 'off',
-    'quotes': ['error', 'single'],
     'prefer-template': 'error',
     'eqeqeq': 'off',
     'no-eq-null': 'off',
-    'semi': 'error',
     'max-params': 'off',
     'no-return-assign': 'off',
     'max-nested-callbacks': 'off',
