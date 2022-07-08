@@ -29,7 +29,8 @@ yarn demo:client
 
 ## 参考
 
-- https://datatracker.ietf.org/doc/html/rfc6455#section-5
-- https://github.com/websockets/ws
-- https://developer.mozilla.org/zh-CN/docs/Web/API/WebSockets_API/Writing_WebSocket_servers
-- https://juejin.cn/post/6844903544978407431
+- [RFC 6455: The WebSocket Protocol](https://datatracker.ietf.org/doc/html/rfc6455)
+- [RFC 6455: The WebSocket Protocol 中文翻译](http://www.rfc2cn.com/rfc6455.html)
+- [ws: a Node.js WebSocket library](https://github.com/websockets/ws)
+- [编写 WebSocket 服务器](https://developer.mozilla.org/zh-CN/docs/Web/API/WebSockets_API/Writing_WebSocket_servers)
+- [WebSocket：5分钟从入门到精通](https://juejin.cn/post/6844903544978407431)
