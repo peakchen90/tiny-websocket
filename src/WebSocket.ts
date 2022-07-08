@@ -126,6 +126,8 @@ export default class WebSocket {
       return;
     }
 
+    // Buffer 继承 Uint8Array 类
+    // @see https://nodejs.org/api/buffer.html#buffer
     const buffer = this.consume(2);
 
     // Tips: 一个字节有8位； `&` 运算符，只有2个位都为1时，才会1，否则为0
