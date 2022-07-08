@@ -62,7 +62,7 @@ export default class WebSocketClient extends EventEmitter {
         ) {
           this.connecting = false;
           this.connected = true;
-          this.ws = new WebSocket(this, this.socket, 'client');
+          this.ws = new WebSocket(this, this.socket, 'client', false);
           this.emit('connection', this.ws!);
         } else {
           this.close(new Error('Handshake Aborted'));

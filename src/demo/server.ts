@@ -19,6 +19,7 @@ wss.on('message', (sender, message) => {
     if (type === 'join') {
       sender['nickname'] = (data || `Anonymous(${++uid})`).slice(0, 255);
       wss.broadcast(message);
+      printOnlineUsers();
     } else if (type === 'message') {
       wss.broadcast(
         JSON.stringify({
@@ -48,7 +49,13 @@ wss.on('disconnect', (sender) => {
       data: sender['nickname'],
     })
   );
+  printOnlineUsers();
 });
+
+function printOnlineUsers() {
+  const users = [...wss.sockets.values()].map((item) => item['nickname']);
+  console.log('Online User:', users);
+}
 
 // public static assets
 server.on('request', (req: http.IncomingMessage, res: http.ServerResponse) => {

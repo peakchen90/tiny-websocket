@@ -27,19 +27,23 @@ class KeepAlive {
           const responseIndex = Number(message);
           if (this.currentIndex === responseIndex) {
             this.tryCount = 0;
-          } else {
-            this.tryCount++;
+            this.start();
           }
         }
       })
     );
   }
 
-  start() {
+  start(retry: boolean = false) {
+    if (this.timer) {
+      clearTimeout(this.timer);
+    }
+
     this.timer = setTimeout(() => {
-      this.ws.ping(String(++this.currentIndex));
-      if (this.tryCount <= 3) {
-        this.start();
+      this.ws.ping(String(retry ? this.currentIndex : ++this.currentIndex));
+
+      if (++this.tryCount <= 3) {
+        this.start(retry);
       } else {
         this.ws.close();
         this.destroy();
@@ -52,6 +56,7 @@ class KeepAlive {
   destroy() {
     if (this.timer) {
       clearTimeout(this.timer);
+      this.timer = undefined;
     }
     this.ws.host.off('pong', this._listener);
   }
@@ -119,7 +124,7 @@ export default class WebSocket {
     host: EventEmitter,
     socket: stream.Duplex,
     type: WebSocketType,
-    keepAlive = false
+    keepAlive = true
   ) {
     this.host = host;
     this.type = type;
