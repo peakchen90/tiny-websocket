@@ -107,8 +107,8 @@ export default class WebSocket {
    * @param chunk
    */
   append(chunk: any) {
+    // 已断开
     if (this.opcode === 0x08) {
-      // 已断开
       return;
     }
 
@@ -157,8 +157,8 @@ export default class WebSocket {
   getData() {
     let data = Buffer.alloc(0);
     if (this.payloadLength > 0) {
+      // 等待所有片段传输完成再处理
       if (this.bufferedBytes < this.payloadLength) {
-        // 等待所有片段传输完成再处理
         this.isContinueGetData = true;
         return;
       } else {
@@ -171,8 +171,8 @@ export default class WebSocket {
       }
     }
 
+    // control frames
     if (this.opcode >= 0x08) {
-      // control frames
       this.handleControlFrames(data);
       this.totalPayloadLength = 0;
       this.fragments = [];
@@ -181,8 +181,8 @@ export default class WebSocket {
 
     this.fragments.push(data);
 
+    // 分片是否已经结束
     if (this.fin) {
-      // 分片是否已经结束
       let message = this.concatBuffer(this.fragments);
       if (this.opcode === 0x02) {
         // 二进制数据
@@ -217,8 +217,8 @@ export default class WebSocket {
    * @see https://datatracker.ietf.org/doc/html/rfc6455#section-5.5
    */
   handleControlFrames(data: Buffer) {
+    // disconnect
     if (this.opcode === 0x08) {
-      // disconnect
       const code = data.slice(0, 2).readUInt16BE(0);
       const reason = data.slice(2).toString();
 
@@ -227,6 +227,7 @@ export default class WebSocket {
     }
 
     const message = data.toString();
+
     if (this.opcode === 0x09) {
       // ping
       this.host.emit('ping', this, message);
@@ -378,7 +379,8 @@ export default class WebSocket {
     this.socket.write(
       this.buildFrame(buffer, {
         // https://datatracker.ietf.org/doc/html/rfc6455#section-5.1
-        masked: this.type !== 'server', // 服务端发送不能使用掩码
+        // 服务端发送不能使用掩码
+        masked: this.type !== 'server',
         opcode,
         fin,
       })
