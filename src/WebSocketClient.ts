@@ -44,8 +44,6 @@ export default class WebSocketClient extends EventEmitter {
       'Connection: Upgrade',
       `Sec-WebSocket-Key: ${key}`,
       'Sec-WebSocket-Version: 13',
-      'Pragma: no-cache',
-      'Cache-Control: no-cache',
       '\r\n',
     ];
     this.socket.write(chunks.join('\r\n'));
