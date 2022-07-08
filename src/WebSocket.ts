@@ -70,7 +70,7 @@ export default class WebSocket {
     host: EventEmitter,
     socket: stream.Duplex,
     type: WebSocketType,
-    keepAlive = true
+    keepAlive = false
   ) {
     this.host = host;
     this.type = type;
