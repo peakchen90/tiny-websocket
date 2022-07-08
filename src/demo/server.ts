@@ -32,12 +32,12 @@ wss.on('message', (sender, message) => {
     // 0 0 0 0 0 0 0 0 : 昵称长度
     // ...             : 昵称位置
     // ...             : 二进制数据位置
-    const nickname: string = sender['nickname'];
-    const nicknameBuffer = Buffer.allocUnsafe(1 + nickname.length);
-    nicknameBuffer.writeUInt8(nickname.length, 0);
-    nicknameBuffer.set(Buffer.from(nickname), 1);
+    const nickBuffer = Buffer.from(sender['nickname']);
+    const headerBuffer = Buffer.allocUnsafe(1 + nickBuffer.length);
+    headerBuffer.writeUInt8(nickBuffer.length, 0);
+    headerBuffer.set(nickBuffer, 1);
 
-    wss.broadcast([nicknameBuffer, message], true);
+    wss.broadcast([headerBuffer, message], true);
   }
 });
 

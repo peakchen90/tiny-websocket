@@ -28,7 +28,8 @@
     "http-headers": "^3.0.2",
     "inquirer": "^8.2.4",
     "mime-types": "^2.1.35",
-    "mockjs": "^1.1.0"
+    "mockjs": "^1.1.0",
+    "terminal-image": "^1.2.1"
   },
   "devDependencies": {
     "@swc/wasm": "^1.2.210",

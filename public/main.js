@@ -5,6 +5,7 @@ const image = document.getElementById('image');
 const logs = document.getElementById('logs');
 
 const nick = localStorage.getItem('tiny_ws_username') || Mock.mock('@cname');
+const decoder = new TextDecoder('utf-8');
 
 nickname.innerText = nick;
 localStorage.setItem('tiny_ws_username', nick);
@@ -27,14 +28,6 @@ ws.onclose = () => {
   printLog('服务器连接已断开');
 };
 
-function bufferToString(buffer, start, end) {
-  let str = '';
-  for (let i = start; i < end; i++) {
-    str += String.fromCharCode(buffer[i]);
-  }
-  return str;
-}
-
 ws.onmessage = (evt) => {
   if (typeof evt.data === 'string') {
     const { type, username, data } = JSON.parse(evt.data);
@@ -53,14 +46,14 @@ ws.onmessage = (evt) => {
   } else {
     const buffer = new Uint8Array(evt.data);
     const _nickLength = buffer[0];
-    const _nick = bufferToString(buffer, 1, 1 + _nickLength);
+    const _nick = decoder.decode(buffer.slice(1, 1 + _nickLength));
     const _imageObj = new Blob([buffer.slice(1 + _nickLength).buffer]);
 
     const msgNode = document.createElement('p');
     const imgNode = document.createElement('img');
     imgNode.src = URL.createObjectURL(_imageObj);
-    imgNode.style.maxWidth = '200px';
-    imgNode.style.maxHeight = '200px';
+    imgNode.style.maxWidth = '300px';
+    imgNode.style.maxHeight = '300px';
     imgNode.style.marginLeft = '10px';
     imgNode.style.marginBottom = '10px';
     msgNode.appendChild(imgNode);
