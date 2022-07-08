@@ -4,15 +4,20 @@
 
 ## 运行 demo
 
-```bash
-# 安装依赖
-yarn install
 
-# 运行demo
-yarn demo
+**启动服务**
+```bash
+yarn demo:server
 ```
 
 > 然后在浏览器中打开 `http://127.0.0.1:3333`
+
+**运行 WebSocket 客户端（nodejs）**
+```bash
+yarn demo:client
+```
+
+> Tips: WebSocket 客户端 (nodejs) 可以与浏览器客户端互相交互通信，基于 ws 协议
 
 ## Features
 

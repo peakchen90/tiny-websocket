@@ -1,8 +1,9 @@
 import inquirer from 'inquirer';
 import chalk from 'chalk';
-import WebSocketClient from './WebSocketClient';
+import { mock } from 'mockjs';
+import WebSocketClient from '../WebSocketClient';
 
-const NICK = `Client_${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
+const NICK = mock('@cname');
 
 const client = new WebSocketClient('ws://127.0.0.1:3333');
 

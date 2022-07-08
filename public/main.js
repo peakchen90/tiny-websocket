@@ -4,9 +4,7 @@ const form = document.getElementById('form');
 const image = document.getElementById('image');
 const logs = document.getElementById('logs');
 
-const nick =
-  localStorage.getItem('tiny_ws_username') ||
-  Math.random().toString(36).slice(2, 6).toUpperCase();
+const nick = localStorage.getItem('tiny_ws_username') || Mock.mock('@cname');
 
 nickname.innerText = nick;
 localStorage.setItem('tiny_ws_username', nick);

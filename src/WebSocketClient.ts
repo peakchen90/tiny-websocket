@@ -21,12 +21,10 @@ export default class WebSocketClient extends EventEmitter {
     this.connected = false;
 
     this.url = new URL(url);
-    this.socket = new net.Socket({ writable: true, readable: true })
-      .setKeepAlive(true)
-      .connect({
-        port: Number(this.url.port || 80),
-        host: this.url.hostname,
-      });
+    this.socket = new net.Socket({ writable: true, readable: true }).connect({
+      port: Number(this.url.port || 80),
+      host: this.url.hostname,
+    });
 
     this.initialize();
   }

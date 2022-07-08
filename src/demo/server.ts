@@ -1,13 +1,14 @@
 import http from 'http';
-import WebSocketServer from './WebSocketServer';
 import path from 'path';
 import fs from 'fs-extra';
 import mime from 'mime-types';
+import WebSocketServer from '../WebSocketServer';
 
 const server = http.createServer();
 const wss = new WebSocketServer(server);
 
-const PUBLIC_ROOT = path.join(__dirname, '../public');
+const ROOT = path.join(__dirname, '../..');
+const PUBLIC_ROOT = path.join(ROOT, 'public');
 const PORT = 3333;
 
 let uid = 0;
@@ -60,7 +61,10 @@ server.on('request', (req: http.IncomingMessage, res: http.ServerResponse) => {
     url = '/index.html';
   }
 
-  const filename = path.join(PUBLIC_ROOT, url);
+  const filename = url.startsWith('/node_modules/')
+    ? path.join(ROOT, url)
+    : path.join(PUBLIC_ROOT, url);
+
   if (fs.pathExistsSync(filename)) {
     res.statusCode = 200;
     res.setHeader('Content-Type', mime.lookup(filename) || 'text/plain');
