@@ -48,14 +48,14 @@ export default class WebSocketServer extends EventEmitter {
       .update(key + MAGIC_GUID)
       .digest('base64');
 
-    const chunks = [
+    const handshake = [
       'HTTP/1.1 101 Switching Protocols',
       'Upgrade: websocket',
       'Connection: Upgrade',
       `Sec-WebSocket-Accept: ${hashKey}`,
       '\r\n',
     ];
-    socket.write(chunks.join('\r\n'));
+    socket.write(handshake.join('\r\n'));
     const ws = new WebSocket(this, socket, 'server');
     this.sockets.set(socket, ws);
     this.emit('connection', ws);

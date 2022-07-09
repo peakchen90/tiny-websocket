@@ -37,7 +37,7 @@ export default class WebSocketClient extends EventEmitter {
       .update(key + MAGIC_GUID)
       .digest('base64');
 
-    const chunks = [
+    const handshake = [
       `GET ${this.url.href} HTTP/1.1`,
       `Host: ${this.url.host}`,
       'Upgrade: websocket',
@@ -46,7 +46,7 @@ export default class WebSocketClient extends EventEmitter {
       'Sec-WebSocket-Version: 13',
       '\r\n',
     ];
-    this.socket.write(chunks.join('\r\n'));
+    this.socket.write(handshake.join('\r\n'));
 
     this.socket.on('data', (chunk) => {
       if (this.connecting) {
