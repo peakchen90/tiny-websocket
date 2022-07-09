@@ -39,7 +39,7 @@ export default class WebSocketClient extends EventEmitter {
 
     const chunks = [
       `GET ${this.url.href} HTTP/1.1`,
-      `Host ${this.url.host}`,
+      `Host: ${this.url.host}`,
       'Upgrade: websocket',
       'Connection: Upgrade',
       `Sec-WebSocket-Key: ${key}`,

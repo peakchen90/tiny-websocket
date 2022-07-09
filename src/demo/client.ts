@@ -46,7 +46,7 @@ client.on('message', (ws, message) => {
     const imgBuffer = message.slice(1 + nickLength);
 
     terminalImage.buffer(imgBuffer).then((img) => {
-      receive(`${nick}\n`);
+      receive(nick);
       console.log(img);
     });
   }
