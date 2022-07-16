@@ -52,7 +52,7 @@ export default class WebSocket {
   closed: boolean;
   socket: stream.Duplex;
 
-  private isDataContinue: boolean;
+  private isContinueReceiveData: boolean;
   private bufferedBytes: number; // 所有缓存 buffer 的字节数
   private buffers: Buffer[]; // 所有缓存的buffer
   private fragments: Buffer[]; // 保存分片内容
@@ -77,7 +77,7 @@ export default class WebSocket {
     this.closed = false;
     this.socket = socket;
 
-    this.isDataContinue = false;
+    this.isContinueReceiveData = false;
     this.bufferedBytes = 0;
     this.buffers = [];
     this.fragments = [];
@@ -115,13 +115,13 @@ export default class WebSocket {
     this.bufferedBytes += chunk.length;
     this.buffers.push(chunk);
 
-    if (!this.isDataContinue) {
-      this.getHeader();
+    if (!this.isContinueReceiveData) {
+      this.receiveHeader();
     }
-    this.getData();
+    this.receiveData();
   }
 
-  getHeader() {
+  receiveHeader() {
     if (this.bufferedBytes < 2) {
       return;
     }
@@ -154,15 +154,15 @@ export default class WebSocket {
     }
   }
 
-  getData() {
+  receiveData() {
     let data = Buffer.alloc(0);
     if (this.payloadLength > 0) {
       // 等待所有片段传输完成再处理
       if (this.bufferedBytes < this.payloadLength) {
-        this.isDataContinue = true;
+        this.isContinueReceiveData = true;
         return;
       } else {
-        this.isDataContinue = false;
+        this.isContinueReceiveData = false;
       }
 
       data = this.consume(this.payloadLength);
