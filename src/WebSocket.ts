@@ -146,7 +146,7 @@ export default class WebSocket {
       let num = target.readUInt32BE(0) * Math.pow(2, 32); // 读取前4个字节， 并强制左移32位（为后面32位腾空间）
       this.payloadLength = num + target.readUInt32BE(4);
     }
-    this.totalPayloadLength += this.payloadLength;
+    this.totalPayloadLength += this.payloadLength; // 记录分片传输场景的收到总字节数
 
     // 读取掩码（32位）
     if (this.masked) {
@@ -157,7 +157,7 @@ export default class WebSocket {
   receiveData() {
     let data = Buffer.alloc(0);
     if (this.payloadLength > 0) {
-      // 等待所有片段传输完成再处理
+      // 等待缓冲区分段读取完成
       if (this.bufferedBytes < this.payloadLength) {
         this.isContinueReceiveData = true;
         return;
@@ -181,7 +181,7 @@ export default class WebSocket {
 
     this.fragments.push(data);
 
-    // 分片是否已经结束
+    // 分片传输结束
     if (this.fin) {
       let message = this.concatBuffer(this.fragments);
       if (this.opcode === 0x02) {
