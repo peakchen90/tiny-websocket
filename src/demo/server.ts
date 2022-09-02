@@ -2,6 +2,7 @@ import http from 'http';
 import path from 'path';
 import fs from 'fs-extra';
 import mime from 'mime-types';
+import os from 'os';
 import WebSocketServer from '../WebSocketServer';
 
 const server = http.createServer();
@@ -10,6 +11,20 @@ const wss = new WebSocketServer(server);
 const ROOT = path.join(__dirname, '../..');
 const PUBLIC_ROOT = path.join(ROOT, 'public');
 const PORT = 3333;
+const LOCAL_IP = (() => {
+  for (const infos of Object.values(os.networkInterfaces())) {
+    for (const item of infos || []) {
+      if (
+        !item.internal &&
+        item.family === 'IPv4' &&
+        item.address !== '127.0.0.1'
+      ) {
+        return item.address;
+      }
+    }
+  }
+  return '127.0.0.1';
+})();
 
 let uid = 0;
 
@@ -85,7 +100,7 @@ server.on('request', (req: http.IncomingMessage, res: http.ServerResponse) => {
 });
 
 server.on('listening', () => {
-  console.log(`服务启动成功: http://127.0.0.1:${PORT}`);
+  console.log(`服务启动成功: http://${LOCAL_IP}:${PORT}`);
 });
 
 server.listen(PORT);

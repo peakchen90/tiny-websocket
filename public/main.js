@@ -10,7 +10,7 @@ const decoder = new TextDecoder('utf-8');
 nickname.innerText = nick;
 localStorage.setItem('tiny_ws_username', nick);
 
-const ws = new WebSocket('ws://127.0.0.1:3333');
+const ws = new WebSocket(`ws://${location.hostname}:3333/ws`);
 ws.binaryType = 'arraybuffer';
 
 window.ws = ws;
@@ -106,5 +106,5 @@ function printLog(head = '', msg = '') {
 
   setTimeout(() => {
     logs.scrollTo(0, logs.scrollHeight);
-  });
+  }, 20);
 }
