@@ -52,7 +52,7 @@ ws.onmessage = (evt) => {
     const msgNode = document.createElement('p');
     const imgNode = document.createElement('img');
     imgNode.src = URL.createObjectURL(_imageObj);
-    imgNode.style.maxWidth = '300px';
+    imgNode.style.maxWidth = '60%';
     imgNode.style.maxHeight = '300px';
     imgNode.style.marginLeft = '10px';
     imgNode.style.marginBottom = '10px';

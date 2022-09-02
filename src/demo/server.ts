@@ -76,8 +76,7 @@ server.on('request', (req: http.IncomingMessage, res: http.ServerResponse) => {
     res.statusCode = 200;
     res.setHeader('Content-Type', mime.lookup(filename) || 'text/plain');
     res.setHeader('Cache-Control', 'max-age=0');
-    res.write(fs.readFileSync(filename));
-    res.end();
+    fs.createReadStream(filename).pipe(res);
   } else {
     res.statusCode = 404;
     res.statusMessage = 'Not Found';
